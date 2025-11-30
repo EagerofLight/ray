@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime
 from enum import Enum, unique
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import click
 import yaml
@@ -32,6 +32,8 @@ from ray.util.state.common import (
     resource_to_schema,
 )
 from ray.util.state.exception import RayStateApiException
+from ray.dashboard.modules.job.cli_utils import BoolOrStringParam
+from ray.util.state.util import _handle_headers
 
 logger = logging.getLogger(__name__)
 
@@ -338,6 +340,26 @@ address_option = click.option(
         "automatically from querying the GCS server."
     ),
 )
+headers_option = click.option(
+    "--headers",
+    required=False,
+    type=str,
+    default=None,
+    help=(
+        "Pass headers through http/s to the Ray State API"
+        'please follow JSON formatting formatting {"key": "value"}'
+    )
+)
+verify_option = click.option(
+    "--verify",
+    type=BoolOrStringParam
+    default=True,
+    show_default=True,
+    help=(
+        "Boolean indication to verify the server's TLS certificate or a path to"
+        " a file or directory of trusted certificates."
+    )
+)
 
 
 @click.command()
@@ -357,12 +379,16 @@ address_option = click.option(
 )
 @address_option
 @timeout_option
+@headers_option
+@verify_option
 @PublicAPI(stability="stable")
 def ray_get(
     resource: str,
     id: str,
     address: Optional[str],
     timeout: float,
+    headers: Optional[str] = None,
+    verify: Optional[Union[str, bool]] = True,
 ):
     """Get a state of a given resource by ID.
 
@@ -409,7 +435,7 @@ def ray_get(
 
     # Create the State API server and put it into context
     logger.debug(f"Create StateApiClient to ray instance at: {address}...")
-    client = StateApiClient(address=address)
+    client = StateApiClient(address=address, headers=_handle_headers(headers), verify=verify)
     options = GetApiOptions(timeout=timeout)
 
     # If errors occur, exceptions will be thrown.
@@ -473,6 +499,8 @@ def ray_get(
 )
 @timeout_option
 @address_option
+@headers_option
+@verify_option
 @PublicAPI(stability="stable")
 def ray_list(
     resource: str,
@@ -482,6 +510,8 @@ def ray_list(
     detail: bool,
     timeout: float,
     address: str,
+    headers: Optional[str] = None,
+    verify: Optional[Union[str, bool]] = True,
 ):
     """List all states of a given resource.
 
@@ -553,7 +583,7 @@ def ray_list(
     format = AvailableFormat(format)
 
     # Create the State API server and put it into context
-    client = StateApiClient(address=address)
+    client = StateApiClient(address=address, headers=_handle_headers(headers), verify=verify)
 
     filter = [_parse_filter(f) for f in filter]
 
@@ -601,6 +631,8 @@ def summary_state_cli_group(ctx):
 @summary_state_cli_group.command(name="tasks")
 @timeout_option
 @address_option
+@headers_option
+@verify_option
 @click.pass_context
 @PublicAPI(stability="stable")
 def task_summary(ctx, timeout: float, address: str):
@@ -632,6 +664,8 @@ def task_summary(ctx, timeout: float, address: str):
 @summary_state_cli_group.command(name="actors")
 @timeout_option
 @address_option
+@headers_option
+@verify_option
 @click.pass_context
 @PublicAPI(stability="stable")
 def actor_summary(ctx, timeout: float, address: str):
@@ -664,9 +698,17 @@ def actor_summary(ctx, timeout: float, address: str):
 @summary_state_cli_group.command(name="objects")
 @timeout_option
 @address_option
+@headers_option
+@verify_option
 @click.pass_context
 @PublicAPI(stability="stable")
-def object_summary(ctx, timeout: float, address: str):
+def object_summary(
+    ctx, 
+    timeout: float, 
+    address: str,
+    headers: Optional[str] = None,
+    verify: Optional[Union[str, bool]] = True
+):
     """Summarize the object state of the cluster.
 
     The API is recommended when debugging memory leaks.
@@ -706,6 +748,8 @@ def object_summary(ctx, timeout: float, address: str):
                 timeout=timeout,
                 raise_on_missing_output=False,
                 _explain=True,
+                headers=_handle_headers(headers),
+                verify=verify,
             ),
         )
     )
@@ -831,6 +875,8 @@ def _print_log(
     task_id: Optional[str] = None,
     attempt_number: int = 0,
     submission_id: Optional[str] = None,
+    headers: Optional[str] = None,
+    verify: Optional[Union[str, bool]] = True
 ):
     """Wrapper around `get_log()` that prints the preamble and the log lines"""
     if tail > 0:
@@ -860,6 +906,8 @@ def _print_log(
         task_id=task_id,
         attempt_number=attempt_number,
         submission_id=submission_id,
+        headers=_handle_headers(headers),
+        verify=verify
     ):
         print(chunk, end="", flush=True)
 
@@ -938,6 +986,8 @@ logs_state_cli_group = LogCommandGroup(help=LOG_CLI_HELP_MSG)
     default="*",
 )
 @address_option
+@headers_option
+@verify_option
 @log_node_id_option
 @log_node_ip_option
 @log_follow_option
@@ -960,6 +1010,8 @@ def log_cluster(
     timeout: int,
     encoding: str,
     encoding_errors: str,
+    headers: Optional[str] = None,
+    verify: Optional[Union[str, bool]] = True
 ):
     """Get/List logs that matches the GLOB_FILTER in the cluster.
     By default, it prints a list of log files that match the filter.
@@ -1006,6 +1058,8 @@ def log_cluster(
         node_ip=node_ip,
         glob_filter=glob_filter,
         timeout=timeout,
+        headers=_handle_headers(headers),
+        verify=verify
     )
 
     log_files_found = []
@@ -1036,6 +1090,8 @@ def log_cluster(
         timeout=timeout,
         encoding=encoding,
         encoding_errors=encoding_errors,
+        headers=headers,
+        verify=verify
     )
 
 
@@ -1057,6 +1113,8 @@ def log_cluster(
     help="Retrieves the logs from the actor with this pid.",
 )
 @address_option
+@headers_option
+@verify_option
 @log_node_id_option
 @log_node_ip_option
 @log_follow_option
@@ -1078,6 +1136,8 @@ def log_actor(
     interval: float,
     timeout: int,
     err: bool,
+    headers: Optional[str] = None,
+    verify: Optional[Union[str, bool]] = True
 ):
     """Get/List logs associated with an actor.
 
@@ -1126,6 +1186,8 @@ def log_actor(
         interval=interval,
         timeout=timeout,
         suffix="err" if err else "out",
+        headers=headers,
+        verify=verify
     )
 
 
@@ -1139,6 +1201,8 @@ def log_actor(
     help="Retrieves the logs from the worker with this pid.",
 )
 @address_option
+@headers_option
+@verify_option
 @log_node_id_option
 @log_node_ip_option
 @log_follow_option
@@ -1159,6 +1223,8 @@ def log_worker(
     interval: float,
     timeout: int,
     err: bool,
+    headers: Optional[str] = None,
+    verify: Optional[Union[str, bool]] = True
 ):
     """Get logs associated with a worker process.
 
@@ -1192,6 +1258,8 @@ def log_worker(
         interval=interval,
         timeout=timeout,
         suffix="err" if err else "out",
+        headers=headers,
+        verify=verify,
     )
 
 
@@ -1207,6 +1275,8 @@ def log_worker(
     ),
 )
 @address_option
+@headers_option
+@verify_option
 @log_follow_option
 @log_tail_option
 @log_interval_option
@@ -1221,6 +1291,8 @@ def log_job(
     tail: int,
     interval: float,
     timeout: int,
+    headers: Optional[str] = None,
+    verify: Optional[bool] = True
 ):
     """Get logs associated with a submission job.
 
@@ -1252,6 +1324,8 @@ def log_job(
         interval=interval,
         timeout=timeout,
         submission_id=submission_id,
+        headers=headers,
+        verify=verify,
     )
 
 
@@ -1272,6 +1346,8 @@ def log_job(
     help="Retrieves the logs from the attempt, default to 0",
 )
 @address_option
+@headers_option
+@verify_option
 @log_follow_option
 @log_interval_option
 @log_tail_option
@@ -1289,6 +1365,8 @@ def log_task(
     tail: int,
     timeout: int,
     err: bool,
+    headers: Optional[str] = None,
+    verify: Optional[bool] = True,
 ):
     """Get logs associated with a task.
 
@@ -1325,4 +1403,6 @@ def log_task(
         interval=interval,
         timeout=timeout,
         suffix="err" if err else "out",
+        headers=headers,
+        verify=verify,
     )

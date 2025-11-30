@@ -38,6 +38,7 @@ from ray.util.state.common import (
     dict_to_state,
 )
 from ray.util.state.exception import RayStateApiException, ServerUnavailable
+from ray.util.state.util import _handle_headers
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,7 @@ class StateApiClient(SubmissionClient):
         address: Optional[str] = None,
         cookies: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
+        verify: Optional[Union[str, bool]] = True
     ):
         """Initialize a StateApiClient and check the connection to the cluster.
 
@@ -127,6 +129,8 @@ class StateApiClient(SubmissionClient):
             cookies: Cookies to use when sending requests to the HTTP job server.
             headers: Headers to use when sending requests to the HTTP job server, used
                 for cases like authentication to a remote cluster.
+            verify: Boolean indication to verify the server's TLS certificate or a path to
+                a file or directory of trusted certificates. Default: True.
         """
         if requests is None:
             raise RuntimeError(
@@ -135,7 +139,8 @@ class StateApiClient(SubmissionClient):
             )
         if not headers:
             headers = {"Content-Type": "application/json"}
-
+        if not (isinstance(verify, str) or isinstance(verify, bool)):
+            raise TypeError(f"verify must be a str or bool, got {type(verify)}")
         # Resolve API server URL
         api_server_url = get_address_for_submission_client(address)
 
@@ -143,6 +148,7 @@ class StateApiClient(SubmissionClient):
             address=api_server_url,
             create_cluster_if_needed=False,
             headers=headers,
+            verify=verify,
             cookies=cookies,
         )
 
@@ -555,6 +561,8 @@ def get_actor(
     address: Optional[str] = None,
     timeout: int = DEFAULT_RPC_TIMEOUT,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Optional[ActorState]:
     """Get an actor by id.
 
@@ -565,6 +573,10 @@ def get_actor(
         timeout: Max timeout value for the state API requests made.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         None if actor not found, or
@@ -573,7 +585,7 @@ def get_actor(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).get(
+    return StateApiClient(address=address, headers=headers, verify=verify).get(
         StateResource.ACTORS, id, GetApiOptions(timeout=timeout), _explain=_explain
     )
 
@@ -584,6 +596,8 @@ def get_job(
     address: Optional[str] = None,
     timeout: int = DEFAULT_RPC_TIMEOUT,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Optional[JobState]:
     """Get a submission job detail by id.
 
@@ -594,6 +608,10 @@ def get_job(
         timeout: Max timeout value for the state API requests made.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         None if job not found, or
@@ -602,7 +620,7 @@ def get_job(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).get(
+    return StateApiClient(address=address, headers=headers, verify=verify).get(
         StateResource.JOBS,
         id,
         GetApiOptions(timeout=timeout),
@@ -616,6 +634,8 @@ def get_placement_group(
     address: Optional[str] = None,
     timeout: int = DEFAULT_RPC_TIMEOUT,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Optional[PlacementGroupState]:
     """Get a placement group by id.
 
@@ -626,6 +646,10 @@ def get_placement_group(
         timeout: Max timeout value for the state APIs requests made.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         None if actor not found, or
@@ -634,7 +658,7 @@ def get_placement_group(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).get(
+    return StateApiClient(address=address, headers=headers, verify=verify).get(
         StateResource.PLACEMENT_GROUPS,
         id,
         GetApiOptions(timeout=timeout),
@@ -648,6 +672,8 @@ def get_node(
     address: Optional[str] = None,
     timeout: int = DEFAULT_RPC_TIMEOUT,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Optional[NodeState]:
     """Get a node by id.
 
@@ -658,6 +684,10 @@ def get_node(
         timeout: Max timeout value for the state APIs requests made.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         None if actor not found, or
@@ -666,7 +696,7 @@ def get_node(
     Raises:
         RayStateApiException: if the CLI is failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).get(
+    return StateApiClient(address=address, headers=headers, verify=verify).get(
         StateResource.NODES,
         id,
         GetApiOptions(timeout=timeout),
@@ -680,6 +710,8 @@ def get_worker(
     address: Optional[str] = None,
     timeout: int = DEFAULT_RPC_TIMEOUT,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Optional[WorkerState]:
     """Get a worker by id.
 
@@ -690,6 +722,10 @@ def get_worker(
         timeout: Max timeout value for the state APIs requests made.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         None if actor not found, or
@@ -698,7 +734,7 @@ def get_worker(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).get(
+    return StateApiClient(address=address, headers=headers, verify=verify).get(
         StateResource.WORKERS,
         id,
         GetApiOptions(timeout=timeout),
@@ -712,6 +748,8 @@ def get_task(
     address: Optional[str] = None,
     timeout: int = DEFAULT_RPC_TIMEOUT,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Optional[TaskState]:
     """Get task attempts of a task by id.
 
@@ -722,6 +760,10 @@ def get_task(
         timeout: Max timeout value for the state APIs requests made.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         None if task not found, or a list of
@@ -736,7 +778,7 @@ def get_task(
         str_id = id
     else:
         str_id = id.task_id().hex()
-    return StateApiClient(address=address).get(
+    return StateApiClient(address=address, headers=headers, verify=verify).get(
         StateResource.TASKS,
         str_id,
         GetApiOptions(timeout=timeout),
@@ -750,6 +792,8 @@ def get_objects(
     address: Optional[str] = None,
     timeout: int = DEFAULT_RPC_TIMEOUT,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[ObjectState]:
     """Get objects by id.
 
@@ -763,6 +807,10 @@ def get_objects(
         timeout: Max timeout value for the state APIs requests made.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         List of
@@ -771,7 +819,7 @@ def get_objects(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).get(
+    return StateApiClient(address=address, headers=headers, verify=verify).get(
         StateResource.OBJECTS,
         id,
         GetApiOptions(timeout=timeout),
@@ -788,6 +836,8 @@ def list_actors(
     detail: bool = False,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[ActorState]:
     """List actors in the cluster.
 
@@ -806,6 +856,10 @@ def list_actors(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         List of
@@ -814,7 +868,7 @@ def list_actors(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).list(
+    return StateApiClient(address=address, headers=headers, verify=verify).list(
         StateResource.ACTORS,
         options=ListApiOptions(
             limit=limit,
@@ -836,6 +890,8 @@ def list_placement_groups(
     detail: bool = False,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[PlacementGroupState]:
     """List placement groups in the cluster.
 
@@ -854,6 +910,10 @@ def list_placement_groups(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         List of :class:`~ray.util.state.common.PlacementGroupState`.
@@ -861,7 +921,7 @@ def list_placement_groups(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).list(
+    return StateApiClient(address=address, headers=headers, verify=verify).list(
         StateResource.PLACEMENT_GROUPS,
         options=ListApiOptions(
             limit=limit, timeout=timeout, filters=filters, detail=detail
@@ -880,6 +940,8 @@ def list_nodes(
     detail: bool = False,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[NodeState]:
     """List nodes in the cluster.
 
@@ -898,6 +960,10 @@ def list_nodes(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         List of dictionarified
@@ -906,7 +972,7 @@ def list_nodes(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).list(
+    return StateApiClient(address=address, headers=headers, verify=verify).list(
         StateResource.NODES,
         options=ListApiOptions(
             limit=limit, timeout=timeout, filters=filters, detail=detail
@@ -925,6 +991,8 @@ def list_jobs(
     detail: bool = False,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[JobState]:
     """List jobs submitted to the cluster by :ref:`ray job submission <jobs-overview>`.
 
@@ -943,6 +1011,10 @@ def list_jobs(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         List of dictionarified
@@ -951,7 +1023,7 @@ def list_jobs(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).list(
+    return StateApiClient(address=address, headers=headers, verify=verify).list(
         StateResource.JOBS,
         options=ListApiOptions(
             limit=limit, timeout=timeout, filters=filters, detail=detail
@@ -970,6 +1042,8 @@ def list_workers(
     detail: bool = False,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[WorkerState]:
     """List workers in the cluster.
 
@@ -988,6 +1062,10 @@ def list_workers(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         List of
@@ -996,7 +1074,7 @@ def list_workers(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).list(
+    return StateApiClient(address=address, headers=headers, verify=verify).list(
         StateResource.WORKERS,
         options=ListApiOptions(
             limit=limit, timeout=timeout, filters=filters, detail=detail
@@ -1015,6 +1093,8 @@ def list_tasks(
     detail: bool = False,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[TaskState]:
     """List tasks in the cluster.
 
@@ -1033,6 +1113,10 @@ def list_tasks(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         List of
@@ -1041,7 +1125,7 @@ def list_tasks(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).list(
+    return StateApiClient(address=address, headers=headers, verify=verify).list(
         StateResource.TASKS,
         options=ListApiOptions(
             limit=limit, timeout=timeout, filters=filters, detail=detail
@@ -1060,6 +1144,8 @@ def list_objects(
     detail: bool = False,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[ObjectState]:
     """List objects in the cluster.
 
@@ -1078,6 +1164,10 @@ def list_objects(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         List of
@@ -1086,7 +1176,7 @@ def list_objects(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).list(
+    return StateApiClient(address=address, headers=headers, verify=verify).list(
         StateResource.OBJECTS,
         options=ListApiOptions(
             limit=limit, timeout=timeout, filters=filters, detail=detail
@@ -1105,6 +1195,8 @@ def list_runtime_envs(
     detail: bool = False,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[RuntimeEnvState]:
     """List runtime environments in the cluster.
 
@@ -1123,6 +1215,10 @@ def list_runtime_envs(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Returns:
         List of
@@ -1131,7 +1227,7 @@ def list_runtime_envs(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).list(
+    return StateApiClient(address=address, headers=headers, verify=verify).list(
         StateResource.RUNTIME_ENVS,
         options=ListApiOptions(
             limit=limit, timeout=timeout, filters=filters, detail=detail
@@ -1150,8 +1246,10 @@ def list_cluster_events(
     detail: bool = False,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> List[Dict]:
-    return StateApiClient(address=address).list(
+    return StateApiClient(address=address, headers=headers, verify=verify).list(
         StateResource.CLUSTER_EVENTS,
         options=ListApiOptions(
             limit=limit, timeout=timeout, filters=filters, detail=detail
@@ -1184,6 +1282,8 @@ def get_log(
     submission_id: Optional[str] = None,
     attempt_number: int = 0,
     _interval: Optional[float] = None,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Generator[str, None, None]:
     """Retrieve log file based on file name or some entities ids (pid, actor id, task id).
 
@@ -1242,6 +1342,10 @@ def get_log(
         submission_id: Job submission ID if getting log from a submission job.
         attempt_number: The attempt number of the task if getting logs generated by a task.
         _interval: The interval in secs to print new logs when `follow=True`.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Return:
         A Generator of log line, None for SendType and ReturnType.
@@ -1278,6 +1382,8 @@ def get_log(
         f"{api_server_url}/api/v0/logs/{media_type}?"
         f"{urllib.parse.urlencode(options_dict)}",
         stream=True,
+        headers=headers,
+        verify=verify,
     ) as r:
         if r.status_code != 200:
             raise RayStateApiException(r.text)
@@ -1294,6 +1400,8 @@ def list_logs(
     node_ip: Optional[str] = None,
     glob_filter: Optional[str] = None,
     timeout: int = DEFAULT_RPC_TIMEOUT,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Dict[str, List[str]]:
     """Listing log files available.
 
@@ -1307,6 +1415,10 @@ def list_logs(
         actor_id: Id of the actor if getting logs from an actor.
         timeout: Max timeout for requests made when getting the logs.
         _interval: The interval in secs to print new logs when `follow=True`.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Return:
         A dictionary where the keys are log groups (e.g. gcs, raylet, worker), and
@@ -1335,7 +1447,9 @@ def list_logs(
     options_dict["timeout"] = timeout
 
     r = requests.get(
-        f"{api_server_url}/api/v0/logs?{urllib.parse.urlencode(options_dict)}"
+        f"{api_server_url}/api/v0/logs?{urllib.parse.urlencode(options_dict)}",
+        headers=headers,
+        verify=verify,
     )
     # TODO(rickyx): we could do better at error handling here.
     r.raise_for_status()
@@ -1360,6 +1474,8 @@ def summarize_tasks(
     timeout: int = DEFAULT_RPC_TIMEOUT,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Dict:
     """Summarize the tasks in cluster.
 
@@ -1371,6 +1487,10 @@ def summarize_tasks(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Return:
         Dictionarified
@@ -1379,7 +1499,7 @@ def summarize_tasks(
     Raises:
         RayStateApiException: if the CLI is failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).summary(
+    return StateApiClient(address=address, headers=headers, verify=verify).summary(
         SummaryResource.TASKS,
         options=SummaryApiOptions(timeout=timeout),
         raise_on_missing_output=raise_on_missing_output,
@@ -1404,6 +1524,10 @@ def summarize_actors(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Return:
         Dictionarified
@@ -1412,7 +1536,7 @@ def summarize_actors(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).summary(
+    return StateApiClient(address=address, headers=headers, verify=verify).summary(
         SummaryResource.ACTORS,
         options=SummaryApiOptions(timeout=timeout),
         raise_on_missing_output=raise_on_missing_output,
@@ -1426,6 +1550,8 @@ def summarize_objects(
     timeout: int = DEFAULT_RPC_TIMEOUT,
     raise_on_missing_output: bool = True,
     _explain: bool = False,
+    headers: Optional[Dict[str, Any]] = None,
+    verify: Optional[Union[str, bool]] = True,
 ) -> Dict:
     """Summarize the objects in cluster.
 
@@ -1437,6 +1563,10 @@ def summarize_objects(
             there is missing data due to truncation/data source unavailable.
         _explain: Print the API information such as API latency or
             failed query information.
+        headers: Headers to use when sending requests to the HTTP job server, used
+            for cases like authentication to a remote cluster.
+        verify: Boolean indication to verify the server's TLS certificate or a path to
+            a file or directory of trusted certificates. Default: True.
 
     Return:
         Dictionarified :class:`~ray.util.state.common.ObjectSummaries`
@@ -1444,7 +1574,7 @@ def summarize_objects(
     Raises:
         RayStateApiException: if the CLI failed to query the data.
     """  # noqa: E501
-    return StateApiClient(address=address).summary(
+    return StateApiClient(address=address, headers=headers, verify=verify).summary(
         SummaryResource.OBJECTS,
         options=SummaryApiOptions(timeout=timeout),
         raise_on_missing_output=raise_on_missing_output,

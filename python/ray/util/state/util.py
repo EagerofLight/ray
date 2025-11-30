@@ -1,4 +1,6 @@
-from typing import Optional, Union
+import json
+import os
+from typing import Any, Dict, Optional, Union
 
 
 def convert_string_to_type(
@@ -60,3 +62,19 @@ def record_deprecated_state_api_import():
     )
 
     record_extra_usage_tag(TagKey.EXPERIMENTAL_STATE_API_IMPORT, "1")
+
+
+def _handle_headers(headers: Optional[str]) -> Optional[Dict[str, Any]]:
+    if headers is None and "RAY_STATE_HEADERS" in os.environ:
+        headers = os.environ["RAY_STATE_HEADERS"]
+    if headers is not None:
+        try:
+            return json.loads(headers)
+        except Exception as exc:
+            raise ValueError(
+                """Failed to parse headers into JSON.
+                Expected format: {{"KEY": "VALUE"}}, got {}, {}""".format(
+                    headers, exc
+                )
+            )
+    return None
